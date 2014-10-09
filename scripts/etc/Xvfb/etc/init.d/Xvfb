@@ -1,0 +1,47 @@
+#!/bin/bash
+# Author: Fabio Mora (mail@fabiomora.com)
+
+XVFB=/usr/bin/Xvfb
+XVFB_ARGS=":99 -screen 0 1280x1024x16 -ac -nolisten tcp -fbdir /var/run"
+
+MESSAGE="X: virtual frame buffer (Xvfb)"
+
+PIDFILE=/var/run/xvfb.pid
+
+case "$1" in
+  start)
+    echo -n "Starting $MESSAGE"
+    start-stop-daemon --start --quiet --pidfile $PIDFILE --make-pidfile --background --exec $XVFB -- $XVFB_ARGS
+    echo "."
+    $0 status
+    ;;
+  stop)
+    echo -n "Stopping $MESSAGE"
+    start-stop-daemon --stop --quiet --pidfile $PIDFILE
+    rm -f $PIDFILE
+    echo "."
+    ;;
+  restart|reload)
+    $0 stop
+    $0 start
+    ;;
+  status)
+    if test -f $PIDFILE
+    then
+	PID=`cat $PIDFILE`  
+	if ps --pid $PID > /dev/null ;
+	then
+	    echo "$MESSAGE is running... (PID: $PID)"
+	else
+   	    echo "$MESSAGE isn't running... (but $PIDFILE still exists...)"
+	fi
+    else
+	echo "$MESSAGE isn't running..."
+    fi
+    ;;
+  *)
+        echo "Usage: $0 {start|stop|restart|status}"
+        exit 1
+esac
+
+exit 0

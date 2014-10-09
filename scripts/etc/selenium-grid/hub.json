@@ -1,0 +1,10 @@
+{
+   "newSessionWaitTimeout": 15000,
+   "throwOnCapabilityNotPresent": true,
+   "nodePolling": 5000,
+   "cleanUpCycle": 5000,
+   "nodeTimeout": 360000,
+   "timeout": 10000,
+   "browserTimeout": 100000,
+   "maxSession": 15
+}

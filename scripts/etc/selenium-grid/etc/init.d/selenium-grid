@@ -1,0 +1,100 @@
+#!/bin/bash
+
+# Author: Fabio Mora (mail@fabiomora.com)
+
+USER=vagrant
+DISPLAY=:99
+
+SELENIUM_JAR=`ls -1 /opt/selenium-grid/selenium-server-standalone-*.jar`
+SELENIUM_RUN="/usr/bin/java -- -jar $SELENIUM_JAR"
+
+HUB_LOG=/var/log/selenium-hub.log
+NODE_LOG=/var/log/selenium-node.log
+NODE_CONFIG=/opt/selenium-grid/node.json
+HUB_CONFIG=/opt/selenium-grid/hub.json
+TEMP_DIR=/tmp
+
+HUB_OPTS="-role hub -hubConfig $HUB_CONFIG"
+NODE_OPTS="-role node -Duser.dir=$TEMP_DIR $NODE_DRIVERS -hub http://localhost:4444/grid/register -nodeConfig $NODE_CONFIG"
+
+HUB_DESCRIPTION="Hub"
+NODE_DESCRIPTION="Node (local)"
+
+PIDFILE_HUB=/var/run/selenium-hub.pid
+PIDFILE_NODE=/var/run/selenium-node.pid
+
+_check_running () {
+    PIDFILE=$1
+    MESSAGE=$2
+    HTTP_URL=$3
+    HTTP_RESPONSE=$4
+
+    HTTP_CODE=$(curl --write-out "%{http_code}\n" --silent --output /dev/null "$HTTP_URL")
+    if [ "$HTTP_RESPONSE" -eq $HTTP_CODE ]
+    then
+	echo -e "\e[0;32m >>> $MESSAGE: Is running\e[0m\n\t(HTTP/$HTTP_CODE on $HTTP_URL is OK)"
+    else
+	echo -e "\e[0;31m >>> $MESSAGE: Isn't running\e[0m\n\t(Expected HTTP/$HTTP_RESPONSE on $HTTP_URL)"
+    fi
+
+    if test -f $PIDFILE
+    then
+        PID=`cat $PIDFILE`
+        if ps --pid $PID > /dev/null ;
+        then
+            echo -e "\t(PID: $PID)"
+        else
+            echo -e "\t(old $PIDFILE still exists)"
+        fi
+    else
+        echo -e "\t(no $PIDFILE file found)"
+    fi
+}
+
+_ensure_directory () {
+    if [ ! -d $1 ];
+    then
+        mkdir -p $1
+    fi
+}
+
+case "$1" in
+  start)
+    echo "Starting Selenium grid..."
+
+    export DISPLAY=$DISPLAY
+    _ensure_directory $TEMP_DIR
+    chown -R $USER:$USER $TEMP_DIR
+
+    echo " >>> $HUB_DESCRIPTION"
+    start-stop-daemon --start --pidfile $PIDFILE_HUB --chuid $USER:$USER --make-pidfile --exec $SELENIUM_RUN $HUB_OPTS > $HUB_LOG 2>&1 &
+
+    echo " >>> $NODE_DESCRIPTION"
+    start-stop-daemon --start --pidfile $PIDFILE_NODE --chuid $USER:$USER --make-pidfile --exec $SELENIUM_RUN $NODE_OPTS > $NODE_LOG 2>&1 &
+
+    sleep 2
+
+    echo "...done."
+    $0 status
+    ;;
+  stop)
+    echo "Stopping: Selenium grid..."
+    start-stop-daemon --stop --quiet --pidfile $PIDFILE_HUB
+    start-stop-daemon --stop --quiet --pidfile $PIDFILE_NODE
+    rm -f $PIDFILE_HUB $PIDFILE_NODE
+    echo "...done."
+    ;;
+  restart|reload)
+    $0 stop
+    $0 start
+    ;;
+  status)
+    _check_running $PIDFILE_HUB "$HUB_DESCRIPTION" "http://localhost:4444/grid/console" "200"
+    _check_running $PIDFILE_NODE "$NODE_DESCRIPTION" "http://localhost:4450/" "403"
+    ;;
+  *)
+        echo "Usage: $0 {start|stop|restart|status}"
+        exit 1
+esac
+
+exit 0
