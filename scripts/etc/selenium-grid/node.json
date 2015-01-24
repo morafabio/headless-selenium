@@ -7,12 +7,12 @@
                 "platform": "LINUX",
                 "maxInstances": 15
             },
-	        {
-		        "browserName": "phantomjs",
-		        "version": "1.9",
-		        "platform": "LINUX",
-		        "maxInstances": 15
-	        }
+	    {
+		"browserName": "phantomjs",
+		"version": "1.9",
+		"platform": "LINUX",
+		"maxInstances": 15
+	    }
         ],
     "configuration":
         {
@@ -24,7 +24,7 @@
             "register": true,
             "cleanUpCycle": 15000,
             "timeout": 30000,
-            "maxSession": 15,
+            "maxSession": 15
        }
 }
 
